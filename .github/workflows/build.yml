@@ -1,0 +1,27 @@
+name: Build
+
+on:
+  push:
+
+jobs:
+  build:
+    name: Build app
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build mod
+        run: |
+          chmod +x ./build.sh
+          ./build.sh
+          mv ./target/i686-pc-windows-msvc/release/widescreen.dll .
+
+      - name: Upload mod to artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: widescreen.dll
+
