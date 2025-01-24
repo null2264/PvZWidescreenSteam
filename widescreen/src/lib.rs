@@ -17,7 +17,18 @@ mod patch_store;
 mod patch_titlescreen;
 mod patch_zengarden;
 
-use winapi::um::winnt::{DLL_PROCESS_ATTACH, PAGE_READWRITE};
+use core::{
+    intrinsics::transmute,
+    arch::asm,
+    cmp::{max, min},
+    ffi::c_void,
+};
+
+use windows::Win32::{
+    Foundation::HINSTANCE,
+    System::SystemServices::DLL_PROCESS_ATTACH,
+    System::Memory::PAGE_READWRITE,
+};
 
 use memory::{alloc_mem, patch};
 use patch_almanac::patch_almanac;
@@ -38,8 +49,6 @@ use patch_store::patch_store;
 use patch_titlescreen::patch_titlescreen;
 use patch_zengarden::patch_zengarden;
 
-use core::intrinsics::transmute;
-
 const PAD: i16 = 133;
 const POLE_OFFSET: i16 = 27;
 
@@ -51,9 +60,9 @@ static mut PAD_CONST_PTR: u32 = 0;
 #[no_mangle] // call it "DllMain" in the compiled DLL
 #[allow(unused_variables)]
 pub extern "stdcall" fn DllMain(
-    hinst_dll: winapi::shared::minwindef::HINSTANCE,
-    fdw_reason: winapi::shared::minwindef::DWORD,
-    lpv_reserved: winapi::shared::minwindef::LPVOID,
+    hinst_dll: HINSTANCE,
+    fdw_reason: u32,
+    lp_reserved: *mut c_void,
 ) -> i32 {
     match fdw_reason {
         DLL_PROCESS_ATTACH => {
@@ -66,23 +75,23 @@ pub extern "stdcall" fn DllMain(
                 PAD_CONST_PTR = global_memory + 20;
                 patch(PAD_CONST_PTR, &transmute::<i32, [u8; 4]>(PAD as i32));
 
-                patch_almanac().unwrap();
+                //patch_almanac().unwrap();
                 patch_app().unwrap();
-                patch_awardscreen().unwrap();
-                patch_board().unwrap();
-                patch_bush().unwrap();
-                patch_button().unwrap();
-                patch_challenge().unwrap();
-                patch_cobroofbug().unwrap();
-                patch_credits().unwrap();
-                patch_cursorobject().unwrap();
-                patch_dialogs().unwrap();
-                patch_gameselector().unwrap();
-                patch_fog().unwrap();
-                patch_intro().unwrap();
-                patch_store().unwrap();
+                // patch_awardscreen().unwrap();
+                // patch_board().unwrap();
+                // patch_bush().unwrap();
+                // patch_button().unwrap();
+                // patch_challenge().unwrap();
+                // patch_cobroofbug().unwrap();
+                // patch_credits().unwrap();
+                // patch_cursorobject().unwrap();
+                // patch_dialogs().unwrap();
+                // patch_gameselector().unwrap();
+                // patch_fog().unwrap();
+                // patch_intro().unwrap();
+                // patch_store().unwrap();
                 patch_titlescreen().unwrap();
-                patch_zengarden().unwrap();
+                // patch_zengarden().unwrap();
             }
             return true as i32;
         }

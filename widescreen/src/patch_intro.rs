@@ -2,7 +2,7 @@ use core::intrinsics::transmute;
 
 use std::error::Error;
 
-use winapi::um::winnt::PAGE_READWRITE;
+use windows::Win32::System::Memory::PAGE_READWRITE;
 
 use crate::{
     memory::{change_permission, patch},

@@ -1,17 +1,19 @@
-use core::arch::asm;
-
-use std::{
+use core::{
+    arch::asm,
     cmp::{max, min},
-    error::Error,
+    ffi::c_void,
 };
 
-use config::Config;
 use iced_x86::code_asm::*;
-use winapi::um::winnt::DLL_PROCESS_ATTACH;
+use windows::Win32::{
+    Foundation::HINSTANCE,
+    System::SystemServices::DLL_PROCESS_ATTACH,
+};
 
 mod config;
 mod memory;
 
+use config::Config;
 use memory::inject;
 
 #[derive(PartialEq, Clone, Copy)]
@@ -44,8 +46,8 @@ fn fill_rect(this: &mut pvz::Graphics, color: pvz::Color, x: i32, y: i32, width:
             "push {2}",
             "push {1}",
             "mov eax, {0}",
-            "mov edx, 0x586d50",
-            "call edx",
+            "mov ebx, 0x59eb80",
+            "call ebx",
             "popad",
             in(reg) this,
             in(reg) x,
@@ -281,7 +283,7 @@ unsafe extern "cdecl" fn draw_all_health_bar(board: *mut pvz::Board, graphics: *
     }
 }
 
-fn onboarddraw() -> Result<(), Box<dyn Error>> {
+fn onboarddraw() -> Result<(), Box<IcedError>> {
     let mut code = CodeAssembler::new(32)?;
     code.pushad()?;
     code.push(dword_ptr(esp + 40))?;
@@ -291,16 +293,16 @@ fn onboarddraw() -> Result<(), Box<dyn Error>> {
     code.popad()?;
     code.ret_1(8)?;
 
-    unsafe { inject(0x417353, code) };
+    unsafe { inject(0x41a80c, code) };
     Ok(())
 }
 
 #[no_mangle] // call it "DllMain" in the compiled DLL
 #[allow(unused_variables)]
 pub extern "stdcall" fn DllMain(
-    hinst_dll: winapi::shared::minwindef::HINSTANCE,
-    fdw_reason: winapi::shared::minwindef::DWORD,
-    lpv_reserved: winapi::shared::minwindef::LPVOID,
+    hinst_dll: HINSTANCE,
+    fdw_reason: u32,
+    lp_reserved: *mut c_void,
 ) -> i32 {
     match fdw_reason {
         DLL_PROCESS_ATTACH => {
