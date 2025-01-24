@@ -1,2 +1,5 @@
+[target.nightly-i686-pc-windows-msvc]
+linker = "lld-link"
+
 [build]
 target = "i686-pc-windows-msvc"
