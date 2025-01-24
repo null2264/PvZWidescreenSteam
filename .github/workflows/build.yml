@@ -14,8 +14,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Rust
+        run: |
+          rustup toolchain install nightly-x86_64-unknown-linux-gnu
+
       - name: Build mod
         run: |
+          cargo update
           chmod +x ./build.sh
           ./build.sh
           mv ./target/i686-pc-windows-msvc/release/widescreen.dll .
