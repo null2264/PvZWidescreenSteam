@@ -1435,4 +1435,4 @@ pub enum ZombieType {
 }
 
 pub(crate) const G_PARTICLE_DEF_ARRAY: *const *const TodParticleDefinition =
-    0x6A9F0C as *const *const TodParticleDefinition;
+    0x731c9c as *const *const TodParticleDefinition;

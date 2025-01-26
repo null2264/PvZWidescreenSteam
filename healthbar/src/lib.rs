@@ -4,10 +4,19 @@ use core::{
     ffi::c_void,
 };
 
+use std::any::type_name_of_val;
+
 use iced_x86::code_asm::*;
+use windows::core::{
+    PCSTR,
+    s,
+};
 use windows::Win32::{
     Foundation::HINSTANCE,
+    Foundation::HWND,
     System::SystemServices::DLL_PROCESS_ATTACH,
+    UI::WindowsAndMessaging::MessageBoxA,
+    UI::WindowsAndMessaging::MB_OK,
 };
 
 mod config;
@@ -34,6 +43,7 @@ static mut PLANT_HB_VISIBILITY: HealthBarVisibility = HealthBarVisibility::Damag
 static mut ZOMBIE_HB_VISIBILITY: HealthBarVisibility = HealthBarVisibility::Never;
 static mut WAVE_METER_VISIBILITY: bool = true;
 
+// FIXME: Crash after sometime
 #[inline]
 fn fill_rect(this: &mut pvz::Graphics, color: pvz::Color, x: i32, y: i32, width: i32, height: i32) {
     let old_color = this.state.mColor;
@@ -41,21 +51,21 @@ fn fill_rect(this: &mut pvz::Graphics, color: pvz::Color, x: i32, y: i32, width:
     unsafe {
         asm!(
             "pushad",
-            "push {4}",
-            "push {3}",
-            "push {2}",
-            "push {1}",
-            "mov eax, {0}",
-            "mov ebx, 0x59eb80",
-            "call ebx",
+            "push {height}",
+            "push {width}",
+            "push {y}",
+            "push {x}",
+            "mov ecx, {this}",
+            "call {func}",
             "popad",
-            in(reg) this,
-            in(reg) x,
-            in(reg) y,
-            in(reg) width,
-            in(reg) height,
-        )
-    }
+            x = in(reg) x,
+            y = in(reg) y,
+            width = in(reg) width,
+            height = in(reg) height,
+            this = in(reg) this,
+            func = in(reg) 0x59eb80,
+        );
+    };
     this.state.mColor = old_color;
 }
 
@@ -202,42 +212,46 @@ fn draw_zombie_health_bar(graphics: &mut pvz::Graphics, zombie: &pvz::Zombie) {
 }
 
 unsafe fn draw_wave_meter(board: &mut pvz::Board, graphics: &mut pvz::Graphics) {
-    match &(*board.mApp).mGameMode {
-        pvz::GameMode::ChallengeZombiquarium
-        | pvz::GameMode::ChallengeSquirrel
-        | pvz::GameMode::TreeOfWisdom
-        | pvz::GameMode::ChallengeZenGarden
-        | pvz::GameMode::ChallengeFinalBoss => return,
-        pvz::GameMode::Adventure => {
-            if board.mLevel == 50 {
-                return;
-            }
-        }
-        _ => {}
-    }
+    // match &(*board.mApp).mGameMode {
+    //     pvz::GameMode::ChallengeZombiquarium
+    //     | pvz::GameMode::ChallengeSquirrel
+    //     | pvz::GameMode::TreeOfWisdom
+    //     | pvz::GameMode::ChallengeZenGarden
+    //     | pvz::GameMode::ChallengeFinalBoss => return,
+    //     pvz::GameMode::Adventure => {
+    //         if board.mLevel == 50 {
+    //             return;
+    //         }
+    //     }
+    //     _ => {}
+    // }
 
-    let zombie_head_image =
-        (*(pvz::TodParticleDefinition::get(pvz::ParticleEffect::ZombieHead).mEmitterDefs)).mImage;
+//     let zombie_head_image =
+//         (*(pvz::TodParticleDefinition::get(pvz::ParticleEffect::ZombieHead).mEmitterDefs)).mImage;
 
-    let old_scale_x = graphics.state.mScaleX;
-    let old_scale_y = graphics.state.mScaleY;
-    graphics.state.mScaleX = 0.5 * old_scale_x;
-    graphics.state.mScaleY = 0.5 * old_scale_y;
-    graphics.DrawImage(
-        zombie_head_image,
-        1700 + board.base.base.mX,
-        700 + board.base.base.mY,
-    );
-    graphics.state.mScaleX = old_scale_x;
-    graphics.state.mScaleY = old_scale_y;
+//     let old_scale_x = graphics.state.mScaleX;
+//     let old_scale_y = graphics.state.mScaleY;
+//     graphics.state.mScaleX = 0.5 * old_scale_x;
+//     graphics.state.mScaleY = 0.5 * old_scale_y;
+//     graphics.DrawImage(
+//         zombie_head_image,
+//         1700 + board.base.base.mX,
+//         700 + board.base.base.mY,
+//     );
+//     graphics.state.mScaleX = old_scale_x;
+//     graphics.state.mScaleY = old_scale_y;
+
+    //MessageBoxA(None, s!("Test"), s!("Debug"), MB_OK);
 
     let meter_height: i32;
     let meter_color: pvz::Color;
 
     if board.mCurrentWave == 0 {
+        MessageBoxA(None, s!("Wave 0"), s!("Debug"), MB_OK);
         meter_height = 100 - 100 * board.mZombieCountDown / board.mZombieCountDownStart;
         meter_color = pvz::Color::new(0xFFFFFFFF);
     } else if board.mHugeWaveCountDown > 0 {
+        //MessageBoxA(None, s!("Wave CountDown > 0"), s!("Debug"), MB_OK);
         meter_height = 100 - 100 * board.mHugeWaveCountDown / 750;
         meter_color = pvz::Color::new(0xA10B0BFF);
     } else if board.mZombieCountDown <= 200 {
@@ -251,6 +265,8 @@ unsafe fn draw_wave_meter(board: &mut pvz::Board, graphics: &mut pvz::Graphics) 
         meter_color = pvz::Color::new(0xFF7F0EFF);
     }
 
+    //MessageBoxA(None, s!("Try to draw"), s!("Debug"), MB_OK);
+
     draw_vert_hb(
         graphics,
         meter_color,
@@ -259,6 +275,8 @@ unsafe fn draw_wave_meter(board: &mut pvz::Board, graphics: &mut pvz::Graphics) 
         min(max(meter_height, 0), 100),
         100,
     );
+
+    //MessageBoxA(None, s!("Done drawing"), s!("Debug"), MB_OK);
 }
 
 #[no_mangle]
@@ -266,34 +284,36 @@ unsafe extern "cdecl" fn draw_all_health_bar(board: *mut pvz::Board, graphics: *
     let board = &mut *board;
     let graphics = &mut *graphics;
 
-    if !matches!(PLANT_HB_VISIBILITY, HealthBarVisibility::Never) {
-        for plant in &board.mPlants {
-            draw_plant_health_bar(graphics, plant);
-        }
-    }
+    // if !matches!(PLANT_HB_VISIBILITY, HealthBarVisibility::Never) {
+    //     for plant in &board.mPlants {
+    //         draw_plant_health_bar(graphics, plant);
+    //     }
+    // }
 
-    if !matches!(ZOMBIE_HB_VISIBILITY, HealthBarVisibility::Never) {
-        for zombie in &board.mZombies {
-            draw_zombie_health_bar(graphics, zombie);
-        }
-    }
+    // if !matches!(ZOMBIE_HB_VISIBILITY, HealthBarVisibility::Never) {
+    //     for zombie in &board.mZombies {
+    //         draw_zombie_health_bar(graphics, zombie);
+    //     }
+    // }
 
     if WAVE_METER_VISIBILITY {
+        //MessageBoxA(None, s!("Try to draw"), s!("Debug"), MB_OK);
         draw_wave_meter(board, graphics);
     }
 }
 
-fn onboarddraw() -> Result<(), Box<IcedError>> {
+unsafe fn onboarddraw() -> Result<(), Box<IcedError>> {
     let mut code = CodeAssembler::new(32)?;
     code.pushad()?;
-    code.push(dword_ptr(esp + 40))?;
-    code.push(dword_ptr(esp + 40))?;
+    code.push(dword_ptr(esp + 0x28))?;
+    code.push(dword_ptr(esp + 0x28))?;
     code.call(draw_all_health_bar as *const () as u64)?;
     code.add(esp, 8)?;
     code.popad()?;
     code.ret_1(8)?;
 
-    unsafe { inject(0x41a80c, code) };
+    inject(0x41a80c, code);
+
     Ok(())
 }
 
@@ -342,9 +362,11 @@ pub extern "stdcall" fn DllMain(
                 }
             }
 
-            unsafe { WAVE_METER_VISIBILITY = config.wave_meter_visibility.unwrap_or(true) };
+            unsafe {
+                WAVE_METER_VISIBILITY = config.wave_meter_visibility.unwrap_or(true);
 
-            onboarddraw().unwrap();
+                onboarddraw().unwrap();
+            };
         }
         _ => {}
     }

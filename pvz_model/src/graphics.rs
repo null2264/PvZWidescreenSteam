@@ -47,15 +47,17 @@ pub struct Graphics {
 impl Graphics {
     #[inline]
     pub unsafe fn DrawImage(&mut self, image: *const Image, x: i32, y: i32) {
+        // let func: extern "C" fn(this: &mut Graphics, image: *const Image, x: i32, y: i32) = std::mem::transmute(0x59f180);
+        // func(self, image, x, y);
         asm!(
             "pushad",
             "push {4}",
             "push {3}",
-            "mov ebx, {2}",
-            "mov eax, {1}",
+            "push {2}",
+            "mov ecx, {1}",
             "call {0}",
             "popad",
-            in(reg) 0x587150,
+            in(reg) 0x59f180,
             in(reg) self,
             in(reg) image,
             in(reg) x,
