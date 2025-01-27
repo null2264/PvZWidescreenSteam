@@ -303,7 +303,7 @@ pub struct LawnApp {
 
 impl LawnApp {
     pub unsafe fn instance() -> &'static mut Self {
-        &mut *(*(0x6A9EC0 as *mut *mut LawnApp))
+        &mut *(*(0x731c50 as *mut *mut LawnApp))
     }
 }
 
